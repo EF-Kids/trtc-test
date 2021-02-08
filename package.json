@@ -24,9 +24,13 @@
     "start": "webpack serve --mode=development"
   },
   "dependencies": {
+    "buffer": "^6.0.3",
+    "crypto-browserify": "^3.12.0",
+    "crypto-js": "^4.0.0",
     "normalize.css": "^8.0.1",
     "react": "^17.0.1",
-    "react-dom": "^17.0.1"
+    "react-dom": "^17.0.1",
+    "trtc-js-sdk": "^4.8.5"
   },
   "devDependencies": {
     "@babel/core": "^7.12.10",

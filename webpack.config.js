@@ -3,6 +3,7 @@ const webpack = require('webpack');
 const Dotenv = require('dotenv-webpack');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
+const trtcOptions = require('./config/trtcOptions');
 
 module.exports = {
   devServer: {
@@ -50,6 +51,9 @@ module.exports = {
     ],
   },
   plugins: [
+    new webpack.DefinePlugin({
+      'process.env.trtcOptions': JSON.stringify(trtcOptions),
+    }),
     new Dotenv({ path: './.env.local' }),
     new HtmlWebpackPlugin({
       template: path.resolve(__dirname, './public/index.html'),

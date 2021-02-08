@@ -1,9 +1,7 @@
 import React, { useEffect, useRef } from 'react';
-import media from './media';
+import trtcManager from './trtcManager';
+import localMedia from './media';
 import styles from './App.module.less';
-
-console.error(process.env.TRTC_APP_ID);
-console.error(process.env.TRTC_SECRET_KEY);
 
 const LocalPod = (props) => {
   const { width, height } = props;
@@ -12,8 +10,10 @@ const LocalPod = (props) => {
 
   useEffect(() => {
     (async () => {
-      await media.initStream(width, height);
-      video.current.srcObject = media.getStream();
+      const getUserMediaConfig = { audio: true, video: { width, height } };
+      await localMedia.init(getUserMediaConfig);
+      console.warn('localStream', localMedia.getLocalStream())
+      video.current.srcObject = localMedia.getLocalStream();
     })();
   }, []);
 
@@ -28,6 +28,15 @@ const RemotePod = (props) => {
   const { width, height } = props;
 
   let video = useRef(null);
+
+  useEffect(() => {
+    (async () => {
+      const getUserMediaConfig = { audio: true, video: { width, height } };
+      await trtcManager.init(getUserMediaConfig);
+      console.warn('remoteStream', trtcManager.getRemoteStream().mediaStream_);
+      video.current.srcObject = trtcManager.getRemoteStream().mediaStream_;
+    })();
+  }, []);
 
   return (
     <div className={styles.RemotePod}>

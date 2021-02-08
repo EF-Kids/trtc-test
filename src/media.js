@@ -1,12 +1,10 @@
 const createMedia = () => {
   let _stream = null;
 
-  const getStream= () => _stream;
+  const getLocalStream= () => _stream;
 
-  const initStream = async (width, height) =>
-    window.navigator.mediaDevices.getUserMedia({
-      audio: true, video: { width, height },
-    })
+  const init = async (getUserMediaConfig) =>
+    window.navigator.mediaDevices.getUserMedia(getUserMediaConfig)
     .then((mediaStream) => {
       _stream = mediaStream;
       return mediaStream;
@@ -17,11 +15,11 @@ const createMedia = () => {
     });
 
   return {
-    initStream,
-    getStream,
+    init,
+    getLocalStream,
   };
 };
 
-const media = createMedia();
+const localMedia = createMedia();
 
-export default media;
+export default localMedia;
