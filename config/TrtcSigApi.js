@@ -1,46 +1,44 @@
-// https://github.com/tencentyun/tls-sig-api-v2-node/blob/eda76e9/TLSSigAPIv2.js
-
 var crypto = require('crypto');
 var zlib = require('zlib');
 
 var base64url = {};
 
 var newBuffer = function (fill, encoding) {
-    return Buffer.from ? Buffer.from(fill, encoding) : new Buffer(fill, encoding)
+  return Buffer.from ? Buffer.from(fill, encoding) : new Buffer(fill, encoding);
 };
 
 base64url.unescape = function unescape(str) {
-    return (str + Array(5 - str.length % 4))
-        .replace(/_/g, '=')
-        .replace(/\-/g, '/')
-        .replace(/\*/g, '+');
+  return (str + Array(5 - (str.length % 4)))
+    .replace(/_/g, '=')
+    .replace(/\-/g, '/')
+    .replace(/\*/g, '+');
 };
 
 base64url.escape = function escape(str) {
-    return str.replace(/\+/g, '*')
-        .replace(/\//g, '-')
-        .replace(/=/g, '_');
+  return str.replace(/\+/g, '*')
+    .replace(/\//g, '-')
+    .replace(/=/g, '_');
 };
 
 base64url.encode = function encode(str) {
-    return this.escape(newBuffer(str).toString('base64'));
+  return this.escape(newBuffer(str).toString('base64'));
 };
 
 base64url.decode = function decode(str) {
-    return newBuffer(this.unescape(str), 'base64').toString();
+  return newBuffer(this.unescape(str), 'base64').toString();
 };
 
 function base64encode(str) {
-    return newBuffer(str).toString('base64')
+  return newBuffer(str).toString('base64');
 }
 
 function base64decode(str) {
-    return newBuffer(str, 'base64').toString()
+  return newBuffer(str, 'base64').toString();
 }
 
 var Api = function (sdkappid, key) {
-    this.sdkappid = sdkappid;
-    this.key = key;
+  this.sdkappid = sdkappid;
+  this.key = key;
 };
 /**
  * 通过传入参数生成 base64 的 hmac 值
@@ -51,15 +49,15 @@ var Api = function (sdkappid, key) {
  * @private
  */
 Api.prototype._hmacsha256 = function (identifier, currTime, expire, base64UserBuf) {
-    var contentToBeSigned = "TLS.identifier:" + identifier + "\n";
-    contentToBeSigned += "TLS.sdkappid:" + this.sdkappid + "\n";
-    contentToBeSigned += "TLS.time:" + currTime + "\n";
-    contentToBeSigned += "TLS.expire:" + expire + "\n";
-    if (null != base64UserBuf) {
-        contentToBeSigned += "TLS.userbuf:" + base64UserBuf + "\n";
-    }
-    const hmac = crypto.createHmac("sha256", this.key);
-    return hmac.update(contentToBeSigned).digest('base64');
+  var contentToBeSigned = "TLS.identifier:" + identifier + "\n";
+  contentToBeSigned += "TLS.sdkappid:" + this.sdkappid + "\n";
+  contentToBeSigned += "TLS.time:" + currTime + "\n";
+  contentToBeSigned += "TLS.expire:" + expire + "\n";
+  if (null != base64UserBuf) {
+    contentToBeSigned += "TLS.userbuf:" + base64UserBuf + "\n";
+  }
+  const hmac = crypto.createHmac("sha256", this.key);
+  return hmac.update(contentToBeSigned).digest("base64");
 };
 /**
  * TRTC业务进房权限加密串需使用用户定义的userbuf
@@ -74,102 +72,98 @@ Api.prototype._hmacsha256 = function (identifier, currTime, expire, base64UserBu
  * @return userbuf  {string}  返回的userbuf
  */
 Api.prototype._genUserbuf = function (account, dwAuthID, dwExpTime,
-    dwPrivilegeMap, dwAccountType, roomstr) {
+  dwPrivilegeMap, dwAccountType, roomstr) {
+  let accountLength = account.length;
+  let roomstrlength = 0;
+  let length = 1 + 2 + accountLength + 20;
+  if (null != roomstr) {
+    roomstrlength = roomstr.length;
+    length = length + 2 + roomstrlength;
+  }
+  let offset = 0;
+  let userBuf = Buffer.alloc(length);
 
-    let accountLength = account.length;
-    let roomstrlength = 0;
-    let length = 1 + 2 + accountLength + 20 ;
-    if (null != roomstr)
-    {
-        roomstrlength = roomstr.length;
-        length = length + 2 + roomstrlength;
+  //cVer
+  if (null != roomstr) userBuf[offset++] = 1;
+  else userBuf[offset++] = 0;
+
+  //wAccountLen
+  userBuf[offset++] = (accountLength & 0xff00) >> 8;
+  userBuf[offset++] = accountLength & 0x00ff;
+
+  //buffAccount
+  for (; offset < 3 + accountLength; ++offset) {
+    userBuf[offset] = account.charCodeAt(offset - 3);
+  }
+
+  //dwSdkAppid
+  userBuf[offset++] = (this.sdkappid & 0xff000000) >> 24;
+  userBuf[offset++] = (this.sdkappid & 0x00ff0000) >> 16;
+  userBuf[offset++] = (this.sdkappid & 0x0000ff00) >> 8;
+  userBuf[offset++] = this.sdkappid & 0x000000ff;
+
+  //dwAuthId
+  userBuf[offset++] = (dwAuthID & 0xff000000) >> 24;
+  userBuf[offset++] = (dwAuthID & 0x00ff0000) >> 16;
+  userBuf[offset++] = (dwAuthID & 0x0000ff00) >> 8;
+  userBuf[offset++] = dwAuthID & 0x000000ff;
+
+  //过期时间：dwExpTime+now
+  let expire = Date.now() / 1000 + dwExpTime;
+  userBuf[offset++] = (expire & 0xff000000) >> 24;
+  userBuf[offset++] = (expire & 0x00ff0000) >> 16;
+  userBuf[offset++] = (expire & 0x0000ff00) >> 8;
+  userBuf[offset++] = expire & 0x000000ff;
+
+  //dwPrivilegeMap
+  userBuf[offset++] = (dwPrivilegeMap & 0xff000000) >> 24;
+  userBuf[offset++] = (dwPrivilegeMap & 0x00ff0000) >> 16;
+  userBuf[offset++] = (dwPrivilegeMap & 0x0000ff00) >> 8;
+  userBuf[offset++] = dwPrivilegeMap & 0x000000ff;
+
+  //dwAccountType
+  userBuf[offset++] = (dwAccountType & 0xff000000) >> 24;
+  userBuf[offset++] = (dwAccountType & 0x00ff0000) >> 16;
+  userBuf[offset++] = (dwAccountType & 0x0000ff00) >> 8;
+  userBuf[offset++] = dwAccountType & 0x000000ff;
+
+  if (null != roomstr) {
+    //roomstrlength
+    userBuf[offset++] = (roomstr.length & 0xff00) >> 8;
+    userBuf[offset++] = roomstr.length & 0x00ff;
+
+    //roomstr
+    for (; offset < length; ++offset) {
+      userBuf[offset] = roomstr.charCodeAt(offset - (length - roomstr.length));
     }
-    let offset = 0;
-    let userBuf = new Buffer.alloc(length);
+  }
 
-    //cVer
-    if (null != roomstr)
-        userBuf[offset++] = 1;
-    else
-        userBuf[offset++] = 0;
-
-    //wAccountLen
-    userBuf[offset++] = (accountLength & 0xFF00) >> 8;
-    userBuf[offset++] = accountLength & 0x00FF;
-
-    //buffAccount
-    for (; offset < 3 + accountLength; ++offset) {
-        userBuf[offset] = account.charCodeAt(offset - 3);
-    }
-
-    //dwSdkAppid
-    userBuf[offset++] = (this.sdkappid & 0xFF000000) >> 24;
-    userBuf[offset++] = (this.sdkappid & 0x00FF0000) >> 16;
-    userBuf[offset++] = (this.sdkappid & 0x0000FF00) >> 8;
-    userBuf[offset++] = this.sdkappid & 0x000000FF;
-
-    //dwAuthId
-    userBuf[offset++] = (dwAuthID & 0xFF000000) >> 24;
-    userBuf[offset++] = (dwAuthID & 0x00FF0000) >> 16;
-    userBuf[offset++] = (dwAuthID & 0x0000FF00) >> 8;
-    userBuf[offset++] = dwAuthID & 0x000000FF;
-
-    //过期时间：dwExpTime+now
-    let expire = Date.now() / 1000 + dwExpTime;
-    userBuf[offset++] = (expire & 0xFF000000) >> 24;
-    userBuf[offset++] = (expire & 0x00FF0000) >> 16;
-    userBuf[offset++] = (expire & 0x0000FF00) >> 8;
-    userBuf[offset++] = expire & 0x000000FF;
-
-    //dwPrivilegeMap
-    userBuf[offset++] = (dwPrivilegeMap & 0xFF000000) >> 24;
-    userBuf[offset++] = (dwPrivilegeMap & 0x00FF0000) >> 16;
-    userBuf[offset++] = (dwPrivilegeMap & 0x0000FF00) >> 8;
-    userBuf[offset++] = dwPrivilegeMap & 0x000000FF;
-
-    //dwAccountType
-    userBuf[offset++] = (dwAccountType & 0xFF000000) >> 24;
-    userBuf[offset++] = (dwAccountType & 0x00FF0000) >> 16;
-    userBuf[offset++] = (dwAccountType & 0x0000FF00) >> 8;
-    userBuf[offset++] = dwAccountType & 0x000000FF;
-
-    if (null != roomstr) {
-        //roomstrlength
-        userBuf[offset++] = (roomstr.length & 0xFF00) >> 8;
-        userBuf[offset++] = roomstr.length & 0x00FF;
-
-        //roomstr
-        for (; offset < length; ++offset) {
-            userBuf[offset] = account.charCodeAt(offset - (length - roomstr.length));
-        }
-    }
-
-    return userBuf;
-}
+  return userBuf;
+};
 Api.prototype.genSig = function (userid, expire, userBuf) {
-    var currTime = Math.floor(Date.now() / 1000);
+  var currTime = Math.floor(Date.now() / 1000);
 
-    var sigDoc = {
-        'TLS.ver': "2.0",
-        'TLS.identifier': "" + userid,
-        'TLS.sdkappid': Number(this.sdkappid),
-        'TLS.time': Number(currTime),
-        'TLS.expire': Number(expire)
-    };
+  var sigDoc = {
+    'TLS.ver': "2.0",
+    'TLS.identifier': "" + userid,
+    'TLS.sdkappid': Number(this.sdkappid),
+    'TLS.time': Number(currTime),
+    'TLS.expire': Number(expire),
+  };
 
-    var sig = '';
-    if (null != userBuf) {
-        var base64UserBuf = base64encode(userBuf);
-        sigDoc['TLS.userbuf'] = base64UserBuf;
-        sig = this._hmacsha256(userid, currTime, expire, base64UserBuf);
-    } else {
-        sig = this._hmacsha256(userid, currTime, expire, null);
-    }
-    sigDoc['TLS.sig'] = sig;
+  var sig = '';
+  if (null != userBuf) {
+    var base64UserBuf = base64encode(userBuf);
+    sigDoc['TLS.userbuf'] = base64UserBuf;
+    sig = this._hmacsha256(userid, currTime, expire, base64UserBuf);
+  } else {
+    sig = this._hmacsha256(userid, currTime, expire, null);
+  }
+  sigDoc['TLS.sig'] = sig;
 
-    var compressed = zlib.deflateSync(newBuffer(JSON.stringify(sigDoc))).toString('base64');
-    return base64url.escape(compressed);
-}
+  var compressed = zlib.deflateSync(newBuffer(JSON.stringify(sigDoc))).toString('base64');
+  return base64url.escape(compressed);
+};
 /**
  *【功能说明】用于签发 TRTC 和 IM 服务中必须要使用的 UserSig 鉴权票据
  *
@@ -178,7 +172,7 @@ Api.prototype.genSig = function (userid, expire, userBuf) {
  * @param expire - UserSig 票据的过期时间，单位是秒，比如 86400 代表生成的 UserSig 票据在一天后就无法再使用了。
  */
 Api.prototype.genUserSig = function (userid, expire) {
-    return this.genSig(userid, expire, null);
+  return this.genSig(userid, expire, null);
 };
 
 /**
@@ -206,9 +200,8 @@ Api.prototype.genUserSig = function (userid, expire) {
  *  - privilegeMap == 0010 1010 == 42  代表该 userid 拥有加入房间和接收音视频数据的权限，但不具备其他权限。
  */
 Api.prototype.genPrivateMapKey = function (userid, expire, roomid, privilegeMap) {
-    var userBuf = this._genUserbuf(userid, roomid, expire, privilegeMap, 0, null);
-    return this.genSig(userid, expire, userBuf);
-
+  var userBuf = this._genUserbuf(userid, roomid, expire, privilegeMap, 0, null);
+  return this.genSig(userid, expire, userBuf);
 };
 /**
  *【功能说明】
@@ -235,9 +228,8 @@ Api.prototype.genPrivateMapKey = function (userid, expire, roomid, privilegeMap)
  *  - privilegeMap == 0010 1010 == 42  代表该 userid 拥有加入房间和接收音视频数据的权限，但不具备其他权限。
  */
 Api.prototype.genPrivateMapKeyWithStringRoomID = function (userid, expire, roomstr, privilegeMap) {
-    var userBuf = this._genUserbuf(userid, 0, expire, privilegeMap, 0, roomstr);
-    return this.genSig(userid, expire, userBuf);
-
+  var userBuf = this._genUserbuf(userid, 0, expire, privilegeMap, 0, roomstr);
+  return this.genSig(userid, expire, userBuf);
 };
 
 exports.Api = Api;
