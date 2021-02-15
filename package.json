@@ -30,7 +30,8 @@
     "normalize.css": "^8.0.1",
     "react": "^17.0.1",
     "react-dom": "^17.0.1",
-    "trtc-js-sdk": "^4.8.5"
+    "trtc-js-sdk": "^4.8.5",
+    "webrtc-adapter": "^7.7.0"
   },
   "devDependencies": {
     "@babel/core": "^7.12.10",

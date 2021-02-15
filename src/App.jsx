@@ -12,8 +12,9 @@ const LocalPod = (props) => {
     (async () => {
       const getUserMediaConfig = { audio: true, video: { width, height } };
       await localMedia.init(getUserMediaConfig);
-      console.warn('localStream', localMedia.getLocalStream())
-      video.current.srcObject = localMedia.getLocalStream();
+      const localStream = localMedia.getLocalStream();
+      console.warn('localStream', localStream)
+      video.current.srcObject = localStream;
     })();
   }, []);
 
@@ -33,8 +34,9 @@ const RemotePod = (props) => {
     (async () => {
       const getUserMediaConfig = { audio: true, video: { width, height } };
       await trtcManager.init(getUserMediaConfig);
-      console.warn('remoteStream', trtcManager.getRemoteStream().mediaStream_);
-      video.current.srcObject = trtcManager.getRemoteStream().mediaStream_;
+      const remoteStream = trtcManager.getRemoteStream().mediaStream_;
+      console.warn('remoteStream', remoteStream);
+      video.current.srcObject = remoteStream;
     })();
   }, []);
 
